@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data & Reports
+tw_stock_analyzer/data/
+tw_stock_analyzer/reports/
+*.csv
+*.xlsx
+
+# Environment
+.env
+config.py
+tw_stock_analyzer/config.py
+
+# IDE
+.vscode/
+.idea/
