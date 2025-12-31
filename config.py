@@ -2,8 +2,8 @@ import os
 
 # Telegram Configuration
 # 使用者需自行設定環境變數或直接填入
-TELEGRAM_BOT_TOKEN = ""
-TELEGRAM_CHAT_ID = ""
+TELEGRAM_BOT_TOKEN = "8430662485:AAGJQp06ZaZAdm3Xok2RSE2-a5sB9hmvVqg"
+TELEGRAM_CHAT_ID = "736763971"
 
 # Data Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -20,4 +20,3 @@ TWSE_URL = "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX"
 # Retry settings
 MAX_RETRIES = 3
 RETRY_DELAY = 5
-
