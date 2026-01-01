@@ -34,7 +34,7 @@ def calculate_ma_volume(df, days=15):
 
 def calculate_kd(df, period=9):
     """
-    計算 KD 值
+    計算 KD 值 (使用 Pandas EWM 優化)
     df: 必須包含 '收盤價', '最高價', '最低價'
     period: 週期 (預設 9)
     """
@@ -55,35 +55,23 @@ def calculate_kd(df, period=9):
     # RSV = (今日收盤 - 最近9天最低) / (最近9天最高 - 最近9天最低) * 100
     
     # Rolling Min/Max
-    # 注意: rolling(9) 包含今日。這符合 RSV 定義 (最近 9 日包含今日)
     rsv_min = df[low_col].rolling(window=period).min()
     rsv_max = df[high_col].rolling(window=period).max()
     
     rsv = (df[close_col] - rsv_min) / (rsv_max - rsv_min) * 100
-    rsv = rsv.fillna(50) # 無法計算時補 50
+    rsv = rsv.fillna(50)
     
-    # 計算 K, D
-    # K = 1/3 * RSV + 2/3 * PrevK
-    # D = 1/3 * K + 2/3 * PrevD
-    # 初始值 50
+    # 計算 KD using EWM
+    # K = 1/3 * RSV + 2/3 * PrevK -> alpha=1/3
+    # D = 1/3 * K + 2/3 * PrevD -> alpha=1/3
     
-    k_values = []
-    d_values = []
+    # Note: adjust=False ensures y_t = alpha*x_t + (1-alpha)*y_{t-1}
+    # We set min_periods=0 to start calculating immediately (though typically needs convergence)
     
-    k = 50
-    d = 50
+    # K calculation
+    df['K'] = rsv.ewm(alpha=1/3, adjust=False, min_periods=0).mean()
     
-    for r in rsv:
-        if np.isnan(r):
-            k_values.append(k)
-            d_values.append(d)
-        else:
-            k = (1/3) * r + (2/3) * k
-            d = (1/3) * k + (2/3) * d
-            k_values.append(k)
-            d_values.append(d)
-            
-    df['K'] = k_values
-    df['D'] = d_values
+    # D calculation
+    df['D'] = df['K'].ewm(alpha=1/3, adjust=False, min_periods=0).mean()
     
     return df

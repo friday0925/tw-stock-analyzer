@@ -2,7 +2,9 @@ import pandas as pd
 from datetime import datetime, timedelta
 import time
 import os
+import concurrent.futures
 import sys
+
 
 # Add parent directory to path to ensure imports work
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -32,20 +34,40 @@ def get_trading_days(days=30):
 
 def ensure_data_availability(dates):
     """
-    確保指定日期的資料都已下載
+    確保指定日期的資料都已下載 (平行下載)
     """
     print(f"檢查 {len(dates)} 天的歷史資料...")
+    
+    dates_to_download = []
+    
+    # Check what needs to be downloaded
     for date_str in dates:
         if not data_fetcher.check_data_exists(date_str):
-            print(f"下載 {date_str} 資料...")
+            dates_to_download.append(date_str)
+            
+    if not dates_to_download:
+        return
+
+    print(f"需要下載 {len(dates_to_download)} 天的資料: {dates_to_download}")
+    
+    def download_task(date_str):
+        print(f"下載 {date_str} 資料...")
+        try:
             df = data_fetcher.fetch_daily_quotes(date_str)
             if df is not None:
                 data_fetcher.save_daily_data(date_str, df)
+                return True
             else:
                 print(f"無法取得 {date_str} 資料 (可能為假日)")
-        else:
-            # print(f"{date_str} 資料已存在")
-            pass
+                return False
+        except Exception as e:
+            print(f"下載失敗 {date_str}: {e}")
+            return False
+
+    # 平行下載
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        executor.map(download_task, dates_to_download)
+
 
 def main():
     print("=== 啟動台灣股市分析工具 ===")
@@ -74,50 +96,68 @@ def main():
     full_df = pd.concat(all_dfs, ignore_index=True)
     
     # 4. 針對每檔股票計算指標
-    print("計算技術指標 (MA15, KD)...")
+    print("計算技術指標 (Vectorized MA15, KD)...")
     
     # 為了加速，我們只處理今天有資料的股票
     today_date = target_days[-1]
-    today_df = all_dfs[-1]
     
-    # 取得所有股票代號
-    codes = full_df['證券代號'].unique()
+    # 確保按照 Code, Date 排序
+    full_df = full_df.sort_values(['證券代號', 'Date'])
     
-    processed_rows = []
+    # 設定 Index 方便 rolling
+    # full_df.set_index('Date', inplace=True) # 不這麼做，因為我們需要 Date column
     
-    # 這裡可以用 groupby 加速，但為了邏輯清晰，先用 groupby apply
-    # Group by Code
-    grouped = full_df.groupby('證券代號')
+    # GroupBy object
+    g = full_df.groupby('證券代號')
     
-    # 計算指標
-    # 注意: 這裡會比較慢，因為有上千檔股票
-    # 優化: 向量化計算
+    print("  - 計算 MA15 Volume...")
+    # 題目: "當日成交量 > 過去15日平均量" (不含當日)
+    # shift(1) 將當日變成昨日
+    full_df['MA15_Vol'] = g['成交股數'].transform(lambda x: x.rolling(window=15).mean().shift(1))
     
-    def process_group(group):
-        # 排序
-        group = group.sort_values('Date')
-        
-        # 計算 MA15 Volume (不含今日的 15 日平均，用於比較)
-        # 題目: "當日成交量 > 過去15日平均量"
-        # 我們計算 rolling mean，然後 shift 1
-        group['MA15_Vol'] = indicators.calculate_ma_volume(group, days=15).shift(1)
-        
-        # 計算過去 15 日最高價 (不含今日)
-        # 條件: 當日股票必須大於過去15日的最高價
-        group['Max15_High'] = group['最高價'].rolling(window=15).max().shift(1)
-        
-        # 計算 KD
-        group = indicators.calculate_kd(group)
-        
-        # 只回傳最後一天 (也就是今天)
-        return group.iloc[[-1]]
+    print("  - 計算 Max15 High...")
+    # 題目: "當日 > 過去15日最高"
+    full_df['Max15_High'] = g['最高價'].transform(lambda x: x.rolling(window=15).max().shift(1))
+    
+    print("  - 計算 KD...")
+    # 計算 RSV
+    # RSV = (Close - Min9) / (Max9 - Min9) * 100
+    rsv_min = g['最低價'].transform(lambda x: x.rolling(window=9).min())
+    rsv_max = g['最高價'].transform(lambda x: x.rolling(window=9).max())
+    
+    rsv = (full_df['收盤價'] - rsv_min) / (rsv_max - rsv_min) * 100
+    full_df['RSV'] = rsv.fillna(50)
+    
+    # Vectorized KD using groupby().ewm()
+    # Pandas 1.2+ supports groupby().ewm()
+    # K = EMA(RSV, alpha=1/3)
+    # D = EMA(K, alpha=1/3)
+    
+    print("  - Vectorized EWM...")
+    # NOTE: ewm() on groupby returns a DataFrame/Series with multi-index (Code, OriginalIndex) or similar
+    # We need to ensure alignment.
+    
+    # Using transform with ewm is safer to align with original df
+    # But transform doesn't support ewm directly in older pandas versions?
+    # New pandas: g['RSV'].ewm(...).mean() works and returns MultiIndex.
+    # We can assign directly if we sort properly (which we did).
+    
+    # This returns series with MultiIndex (Code, Index)
+    # Re-create groupby or access directly because 'RSV' was added after 'g' was created
+    k_series = full_df.groupby('證券代號')['RSV'].ewm(alpha=1/3, adjust=False, min_periods=0).mean()
+    
+    # We need to drop the 'Code' level of index to align with full_df
+    # The result index is (證券代號, original_index) if as_index=True (default for groupby)
+    # But actually ewm() on groupby preserves structure.
+    # Let's verify index. k_series index should be compatible if we reset level 0.
+    
+    full_df['K'] = k_series.reset_index(level=0, drop=True)
+    full_df['D'] = full_df.groupby('證券代號')['K'].ewm(alpha=1/3, adjust=False, min_periods=0).mean().reset_index(level=0, drop=True)
+    
+    # 篩選只保留今天的資料
+    print("取最後一天資料...")
+    result_df = full_df[full_df['Date'] == today_date].copy()
 
-    # 應用計算
-    print("正在處理各股指標 (這可能需要一點時間)...")
-    result_df = grouped.apply(process_group)
-    
-    # Reset index
-    result_df = result_df.reset_index(drop=True)
     
     # 5. 篩選
     print("執行篩選條件...")
