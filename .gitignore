@@ -9,12 +9,7 @@ tw_stock_analyzer/reports/
 *.csv
 *.xlsx
 
-# Logs
-daily_run.log
-*.log
-
 # Environment
-venv/
 .env
 config.py
 tw_stock_analyzer/config.py
