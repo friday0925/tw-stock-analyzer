@@ -1,0 +1,39 @@
+
+=== Stage 1: Local Data Check ===
+Loaded 43 rows of local data
+
+Latest Local Data:
+證券代號             00640L
+證券名稱             富邦日本正2
+成交股數             428813
+成交筆數                107
+成交金額           33661729
+開盤價                77.8
+最高價               78.95
+最低價                77.8
+收盤價               78.95
+漲跌(+/-)             NaN
+漲跌價差               1.15
+最後揭示買價            78.85
+最後揭示買量              3.0
+最後揭示賣價            78.95
+最後揭示賣量             31.0
+本益比                 0.0
+Date           20260102
+MA15_Vol       219440.0
+Max15_High        78.45
+K             87.245528
+D             78.913495
+
+--- Checking Filters ---
+1. Volume (428813) > MA15 (219440.0): True
+2. Open (77.8) < Close (78.95): True
+3. Close (78.95) > Max15 High (78.45): True
+5. K (87.25) > D (78.91): True
+
+=== Stage 2: YFinance Data Check ===
+Fetched 127 rows from yfinance
+Last Date: 2026-01-02 00:00:00
+OSC: 0.034673943062002666
+Prev OSC: 0.002898594438408786
+MACD Condition NOT MATCHED
