@@ -1,6 +1,6 @@
 import requests
 import os
-from .config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from .settings import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 
 def send_telegram_report(file_path, message=""):
     """

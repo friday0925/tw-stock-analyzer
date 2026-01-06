@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from .config import REPORT_DIR
+from .settings import REPORT_DIR
 
 def generate_excel(df, date_str):
     """

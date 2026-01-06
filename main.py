@@ -7,7 +7,7 @@ import sys
 # Add parent directory to path to ensure imports work
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tw_stock_analyzer import config
+from tw_stock_analyzer import settings
 from tw_stock_analyzer import data_fetcher
 from tw_stock_analyzer import indicators
 from tw_stock_analyzer import filters

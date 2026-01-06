@@ -3,7 +3,7 @@ import time
 import pandas as pd
 import os
 import json
-from .config import TWSE_URL, DATA_DIR
+from .settings import TWSE_URL, DATA_DIR
 
 def fetch_daily_quotes(date_str):
     """
