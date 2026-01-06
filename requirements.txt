@@ -2,6 +2,5 @@ pandas
 requests
 openpyxl
 python-telegram-bot
-streamlit
-google-generativeai
 yfinance
+
