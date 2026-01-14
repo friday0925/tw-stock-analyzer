@@ -5,13 +5,12 @@ import sys
 import time
 from datetime import datetime
 
-# Add current directory to path so we can import the package
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from tw_stock_analyzer import data_fetcher
-from tw_stock_analyzer import indicators
-from tw_stock_analyzer import report
-from tw_stock_analyzer import main as app_main
+import data_fetcher
+import indicators
+import report
+import main as app_main
+import settings
+import notifier
 
 st.set_page_config(page_title="TW Stock Analyzer", page_icon="📈", layout="wide")
 

@@ -5,14 +5,12 @@ import os
 import sys
 
 # Add parent directory to path to ensure imports work
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from tw_stock_analyzer import settings
-from tw_stock_analyzer import data_fetcher
-from tw_stock_analyzer import indicators
-from tw_stock_analyzer import filters
-from tw_stock_analyzer import report
-from tw_stock_analyzer import notifier
+import settings
+import data_fetcher
+import indicators
+import filters
+import report
+import notifier
 import yfinance as yf
 
 def get_trading_days(days=30):
